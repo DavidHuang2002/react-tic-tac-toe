@@ -3,16 +3,15 @@ import ReactDOM from 'react-dom';
 import './index.css';
 
 // TODO
+// allowing to play again by clearing the board 
+
+// implemented features
 // record which player clicking ok
 // display o/x based on player ok
-
-// plan -
-// detect if any player has won
-    // track & check board status at each click
-        // 8 possible ways to win
-// allowing to play again by clearing the board
-// prevent player from clicking a clicked square
-
+// detect if any player has won ok
+    // track & check board status at each click ok
+        // 8 possible ways to win ok
+// prevent player from clicking a clicked square ok
 
 class Square extends React.Component {
 	constructor(props) {
@@ -24,13 +23,21 @@ class Square extends React.Component {
 
   handleClick = () => {
     // each click: 1.update boardStatus, 2. display right symbol, 3.check winning cond. 4. if win do something
-    // 5:2 needs players info to be past here from board
-    // 1, 5 done on Board by updateBoard
-    // 3, 4 done on Board by checkWinning
+    // 1.5: needs players info to be past here from board
+    // 1, 1.5 done on Board by updateBoard
+    // 3, 4 done on Board by checkWinning 
+
+    // check if this square has already been clicked or if game ended
+    // if it does, do nothing
+    if(this.state.value || this.props.ifGameEnd){
+      return;
+    }
     
-    const {position, boardUpdater} = this.props;
+    const {position, boardHandleClick} = this.props;
     
-    this.setState({value: boardUpdater(position)});
+    var currentPlayer = boardHandleClick(position);
+
+    this.setState({value: currentPlayer});
 
   };
 
@@ -51,17 +58,49 @@ class Square extends React.Component {
         boardStatus: {
           X: new Set(),
           O: new Set()
-        }
+        },
+        status: null,
     };
 
 		state = this.initialState;
 
-    checkWinning = () => {
+    //called by handleClick in Square, perform all actions required on board
+    // also returns the current player
+    boardHandleClick = (position) => {
+      var currentPlayer = this.boardUpdater(position);
+
+      this.checkWinning(currentPlayer);
+
+      return currentPlayer;
+    }
+
+    // update boardStatus
+    // returns the current player
+    boardUpdater = (i)=>{
+      const playerNow = this.state.player;
+      switch (playerNow){
+        case 'X':
+          this.setState({player: 'O'});
+          break;
+        case 'O':
+          this.setState({player: 'X'});
+          break;
+      }
+      // the arg to setState can also be a func thats in this form: (state, props) => stateChange
+      this.setState((state)=>{
+        // the state should not be directly mutated
+        return {[`boardStatus.${playerNow}`]: state.boardStatus[playerNow].add(i)};
+      }, this.checkWinning.bind(this, playerNow));
       
-    };
-    
-    // helper func - return the player that wins or null
-    getWinner = ()=>{
+      return playerNow;
+    }
+
+    // check if the current player has won, if won, call on Game's won function 
+    // - if called independently in boardHandleClick, the function won't work in time
+    // because the state is not updated immediately
+    // there are two ways to solve: 1. place it in componentDidMount(preferred), 
+    // 2.pass as the callback arg to setState(what I did)
+    checkWinning = (currentPlayer) => {
       const WINNINGCASES = [
         // columns
         new Set([0, 3, 6, ]),
@@ -77,42 +116,51 @@ class Square extends React.Component {
         new Set([0, 4, 8, ]),
         new Set([2, 4, 6, ])
       ]
-
       
-    }
+      // check if boardStatus.O/X contain any of the winningcase
 
-    // called by handleClick in Square
-    // What it does: 1.update boardStatus 5. return the current player 
-    boardUpdater = (i)=>{
-      const playerNow = this.state.player;
-      switch (playerNow){
-        case 'X':
-          this.setState({player: 'O'});
-          // the arg to setState can also be a func thats in this form: (state, props) => stateChange
-          this.setState((state)=>{
-            state.boardStatus.X.add(i);
-            return state.boardStatus;
-          });
+      //private helper function
+      const isSuperset = (set, subset) => {
+        for (let elem of subset) {
+            if (!set.has(elem)) {
+                return false;
+            }
+        }
+        return true;
+      };
+
+      var status = this.state.boardStatus[currentPlayer];
+      console.log(status);
+      
+      var flag = false;
+      for (let winCase of WINNINGCASES) {
+        if(isSuperset(status, winCase)){
+          console.log('winnn');
+          flag = true;
           break;
-        case 'O':
-          this.setState({player: 'X'});
-          this.setState((state)=>{
-            state.boardStatus.O.add(i);
-            return state.boardStatus;
-          });
-          break;
+        }
       }
-      
-      return playerNow;
+
+      if(flag){
+        this.won(currentPlayer);
+      }
+    };
+
+    won = (wonPlayer) => {
+      this.setState({status: `Winner: ${wonPlayer}`})
     }
 
     renderSquare(i) {
-      return <Square position={i} boardUpdater={this.boardUpdater} />;
+      // if game ended, freeze the board so its status cant be changed
+
+      return <Square position={i} 
+      boardHandleClick={this.boardHandleClick} 
+      ifGameEnd={Boolean(this.state.status)}/>;
     }
 
     render() {
 			const {player} = this.state;
-    	const status = 'Next player: ' + player;
+    	const status = this.state.status||('Next player: ' + player);
 			
       return (
         <div>
