@@ -191,7 +191,7 @@ class Square extends React.Component {
     }
   }
   
-  class MyGame extends React.Component {
+  class Game extends React.Component {
     render() {
       return (
         <div className="game">
@@ -207,4 +207,4 @@ class Square extends React.Component {
     }
   }
   
-  export default MyGame;
+  export default Game;
