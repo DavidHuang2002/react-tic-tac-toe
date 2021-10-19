@@ -87,10 +87,16 @@ class Square extends React.Component {
           break;
       }
       // the arg to setState can also be a func thats in this form: (state, props) => stateChange
-      this.setState((state)=>{
+      this.setState(
+        (state)=>{
         // the state should not be directly mutated
-        return {[`boardStatus.${playerNow}`]: state.boardStatus[playerNow].add(i)};
-      }, this.checkWinning.bind(this, playerNow));
+          return (
+            {[`boardStatus.${playerNow}`]: 
+            state.boardStatus[playerNow].add(i)}
+          );
+        }, 
+        () => this.checkWinning(playerNow)
+        );
       
       return playerNow;
     }
